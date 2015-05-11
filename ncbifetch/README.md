@@ -1,6 +1,4 @@
-Sample Module Repository
-========================
+ncbifetch
+=========
 
-This simple project is an example repo for Python projects.
-
-`Learn more <http://kennethreitz.com/repository-structure-and-python.html>`_.
+Retrieves sequence metadata from NCBI for detecting obvious sequencing errors.
