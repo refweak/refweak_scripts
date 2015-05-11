@@ -27,6 +27,8 @@ import sys, os, traceback, argparse
 import time
 import __init__ as meta
 import logging
+import re
+
 
 epi = "Licence: "+meta.__licence__ +  " by " +meta.__author__ + " <" +meta.__author_email__ + ">"
 
@@ -48,8 +50,8 @@ def fetch_wgs(organism='Escherichia'):
     search_param = dict(db='genome', term=organism, retmode='json')
     r = requests.get(esearch, search_param)
     genome_ids = json.loads(r.text)['esearchresult']['idlist']
-    import re
     from httplib import IncompleteRead
+    import xmltodict
 
     # http://eutils.ncbi.nlm.nih.gov/entrez/eutils/elink.fcgi?dbfrom=genome&db=nuccore&id=152&term=wgs[prop]
     for genome_id in genome_ids:
@@ -60,23 +62,42 @@ def fetch_wgs(organism='Escherichia'):
             m = re.search('<Id>(\d+)<\/Id>', line)
 
             if m != None: seq_ids.append(m.group(1))
-        print seq_ids
-        for seq_id in seq_ids[1:]:
-            fetch_param = dict(db='nuccore', id=seq_id, rettype='native', retmode='xml')
+      #  for seq_id in seq_ids[1:]:
+        for listid in seq_ids:
+            fetch_param = dict(db='nuccore', id=str(listid), rettype='native', retmode='xml')
             try:
                 # http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=816135311
+                time.sleep(3)
                 r = requests.get(efetch, fetch_param)
-                read_record(r.text)
+                read_record(r.text.split('\n'))
             except IncompleteRead as e:  #
-                print 'Error with %d' % seq_id
+                print 'Error with %s' % listid
 
     # How to retieve raw sequence:
     # http://www.ncbi.nlm.nih.gov/Traces/wgs/fdump.cgi?JMML02,89
-def read_record(text):
-    import xml.etree.ElementTree as ET
 
-    root = ET.fromstring(text)
-    print root.tag
+
+def read_record(text):
+    row = ''
+    headers = []
+    dat = []
+    for line in text:
+        m = re.search('<Object-id_str>(.+)</Object-id_str>', line)
+        if m != None: headers.append(m.group(1))
+
+        m = re.search('<Dbtag_db>WGS:(.+)</Dbtag_db>', line)
+        if m != None: dat.append(m.group(1))
+
+        m = re.search('<Textseq-id_accession>(.+)</Textseq-id_accession>', line)
+        if m != None: dat.append(m.group(1))
+
+        m = re.search('<User-field_data_str>(.+)</User-field_data_str>', line)
+        if m != None: dat.append(m.group(1))
+
+    print  '#' + '\t'.join(headers)
+    print '\t'.join(dat)
+
+
 
 
 def main ():
